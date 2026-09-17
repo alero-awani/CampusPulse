@@ -1,5 +1,15 @@
 terraform {
-  required_version = ">= 1.6"
+  required_version = ">= 1.11"
+
+  # State is shared in S3 (created by bootstrap-state.sh): versioned, encrypted,
+  # HTTPS only. The lock file stops two people or pipelines applying at once.
+  backend "s3" {
+    bucket       = "campuspulse-tfstate-278746617511"
+    key          = "campuspulse/terraform.tfstate"
+    region       = "us-east-1"
+    encrypt      = true
+    use_lockfile = true
+  }
 
   required_providers {
     aws = {
