@@ -1,0 +1,42 @@
+# Local development stack: DynamoDB Local, a web UI to browse tables, and
+# (optionally) the API in a container.
+#
+#   docker compose up -d                 # database + table browser
+#   docker compose --profile api up -d   # also run the API in Docker
+services:
+  dynamodb:
+    image: amazon/dynamodb-local:latest
+    command: ["-jar", "DynamoDBLocal.jar", "-sharedDb", "-dbPath", "/data"]
+    user: root # the named volume is owned by root
+    ports:
+      - "8000:8000"
+    volumes:
+      - dynamodb-data:/data
+
+  dynamodb-admin:
+    image: aaronshaf/dynamodb-admin:latest
+    environment:
+      DYNAMO_ENDPOINT: http://dynamodb:8000
+      AWS_REGION: us-east-1
+      AWS_ACCESS_KEY_ID: local
+      AWS_SECRET_ACCESS_KEY: local
+    ports:
+      - "8001:8001"
+    depends_on:
+      - dynamodb
+
+  api:
+    profiles: ["api"]
+    build: .
+    environment:
+      APP_ENV: local
+      DYNAMODB_ENDPOINT: http://dynamodb:8000
+      JWT_SECRET: ${JWT_SECRET:-local-development-secret-change-me-0000}
+      DEVICE_API_KEYS: ${DEVICE_API_KEYS:-local-device-key}
+    ports:
+      - "8080:8080"
+    depends_on:
+      - dynamodb
+
+volumes:
+  dynamodb-data:

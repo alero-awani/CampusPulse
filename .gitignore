@@ -1,0 +1,43 @@
+# macOS and editor files
+.DS_Store
+.vscode/
+.idea/
+*.swp
+
+# Local environment files can contain secrets
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
+
+# --- backend (Go) ---
+# Build output: local binaries and Lambda bootstrap files
+backend/bin/
+backend/dist/
+# Test coverage output
+backend/*.out
+backend/coverage.html
+
+# --- infra (Terraform) ---
+# State holds secrets (device key, demo password) and must never be committed.
+*.tfstate
+*.tfstate.*
+# Provider plugins, downloaded by `terraform init`.
+# (infra/.terraform.lock.hcl IS committed: it pins provider versions.)
+infra/.terraform/
+# Variable values: your email and the demo password. Copy infra/terraform.tfvars.example instead.
+infra/terraform.tfvars
+infra/*.auto.tfvars
+# Local overrides and crash logs
+infra/override.tf
+infra/override.tf.json
+infra/*_override.tf
+infra/*_override.tf.json
+infra/crash.log
+infra/crash.*.log
+infra/.terraformrc
+infra/terraform.rc
+# Lambda zip files built from backend/dist
+infra/.build/

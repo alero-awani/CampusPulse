@@ -1,0 +1,4 @@
+# Copy to terraform.tfvars and fill in. terraform.tfvars is not committed.
+budget_email       = "you@example.com"
+monthly_budget_usd = 5
+demo_password      = "choose-a-password-123"
