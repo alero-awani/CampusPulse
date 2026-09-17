@@ -1,0 +1,51 @@
+name: CI
+
+# Runs on every pull request. No AWS access: no id-token permission, no secrets.
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    name: Backend (Go)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: backend/go.mod
+          cache-dependency-path: backend/go.sum
+      - run: go vet ./...
+      - run: go test ./...
+
+  infra:
+    name: Infra (Terraform)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: infra
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "~1.11"
+      - run: terraform fmt -check
+      - run: terraform init -backend=false && terraform validate
+
+  dashboard:
+    name: Dashboard (Bun)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: campus-pulse-dashboard
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install
+      - run: bun run build
