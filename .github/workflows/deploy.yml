@@ -51,9 +51,13 @@ jobs:
         working-directory: infra
         run: terraform init -input=false
 
+      - name: Terraform plan
+        working-directory: infra
+        run: terraform plan -input=false -out=tfplan
+
       - name: Terraform apply
         working-directory: infra
-        run: terraform apply -auto-approve -input=false
+        run: terraform apply -input=false tfplan
 
       # 3. Build and upload the dashboard
       #    (deploy-dashboard.sh runs `bun run build` but not `bun install`)
