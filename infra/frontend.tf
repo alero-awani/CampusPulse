@@ -34,8 +34,33 @@ resource "aws_cloudfront_distribution" "dashboard" {
     origin_access_control_id = aws_cloudfront_origin_access_control.dashboard.id
   }
 
+  # The replicated copy in the recovery region (see replication.tf).
+  origin {
+    origin_id                = "dashboard-bucket-replica"
+    domain_name              = aws_s3_bucket.replica["dashboard"].bucket_regional_domain_name
+    origin_access_control_id = aws_cloudfront_origin_access_control.dashboard.id
+  }
+
+  # If the primary bucket returns a server error, CloudFront retries the same
+  # request against the copy in the recovery region, automatically.
+  origin_group {
+    origin_id = "dashboard-failover"
+
+    failover_criteria {
+      status_codes = [500, 502, 503, 504]
+    }
+
+    member {
+      origin_id = "dashboard-bucket"
+    }
+
+    member {
+      origin_id = "dashboard-bucket-replica"
+    }
+  }
+
   default_cache_behavior {
-    target_origin_id           = "dashboard-bucket"
+    target_origin_id           = "dashboard-failover"
     viewer_protocol_policy     = "redirect-to-https"
     allowed_methods            = ["GET", "HEAD"]
     cached_methods             = ["GET", "HEAD"]

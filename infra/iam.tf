@@ -15,8 +15,8 @@ locals {
   table = { for name, t in aws_dynamodb_table.this : name => t.arn }
 }
 
-# API Lambda: reads and writes campus data. No access to the users table
-# (Cognito handles accounts) and no permission to create or delete tables.
+# API Lambda: reads and writes campus data. Accounts live in Cognito, not DynamoDB,
+# and the role has no permission to create or delete tables.
 resource "aws_iam_role" "api" {
   name               = "${var.project}-api-lambda"
   assume_role_policy = data.aws_iam_policy_document.lambda_assume.json
@@ -89,23 +89,3 @@ resource "aws_iam_role_policy" "api" {
   policy = data.aws_iam_policy_document.api.json
 }
 
-# Login Lambda: only writes its own logs. Signing in with Cognito uses a public
-# Cognito API that needs no IAM permission, and it never touches DynamoDB.
-resource "aws_iam_role" "login" {
-  name               = "${var.project}-login-lambda"
-  assume_role_policy = data.aws_iam_policy_document.lambda_assume.json
-}
-
-data "aws_iam_policy_document" "login" {
-  statement {
-    sid       = "WriteOwnLogs"
-    actions   = ["logs:CreateLogStream", "logs:PutLogEvents"]
-    resources = ["${aws_cloudwatch_log_group.login.arn}:*"]
-  }
-}
-
-resource "aws_iam_role_policy" "login" {
-  name   = "logs-only"
-  role   = aws_iam_role.login.id
-  policy = data.aws_iam_policy_document.login.json
-}

@@ -36,7 +36,6 @@ type Tables struct {
 	Alerts     string
 	Requests   string
 	Aggregates string
-	Users      string
 	Settings   string
 }
 
@@ -70,7 +69,6 @@ func New(ctx context.Context, cfg Config) (*Store, error) {
 		Alerts:     p + "alerts",
 		Requests:   p + "service-requests",
 		Aggregates: p + "aggregates",
-		Users:      p + "users",
 		Settings:   p + "settings",
 	}}, nil
 }
@@ -110,7 +108,6 @@ func (s *Store) definitions() []tableDef {
 			{"by_creator", "creator_id", "created_key"},
 		}},
 		{name: t.Aggregates, pk: "pk", sk: "sk", ttl: "expires_at"},
-		{name: t.Users, pk: "email"},
 		{name: t.Settings, pk: "id"},
 	}
 }

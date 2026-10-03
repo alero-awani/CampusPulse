@@ -28,6 +28,7 @@ type Config struct {
 	TablePrefix        string
 	AuthMode           string // "local" (password hashes in DynamoDB) or "cognito"
 	CognitoClientID    string
+	DemoPassword       string // password of the in-memory demo accounts in local mode
 	JWTSecret          []byte
 	TokenTTL           time.Duration
 	DeviceKeys         []string
@@ -62,6 +63,7 @@ func Load() (Config, []string, error) {
 	}
 
 	c.AuthMode = env("AUTH_MODE", "local")
+	c.DemoPassword = env("DEMO_PASSWORD", "demo1234")
 	switch c.AuthMode {
 	case "local":
 	case "cognito":

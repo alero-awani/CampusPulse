@@ -12,6 +12,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/aws/aws-sdk-go-v2/aws"
+
+	"campuspulse/internal/auth"
 	"campuspulse/internal/model"
 )
 
@@ -20,6 +23,13 @@ type Client struct {
 	base      string
 	deviceKey string
 	http      *http.Client
+	cognito   *auth.Cognito
+}
+
+// UseCognito makes Login sign in with Cognito directly, as in AWS, instead of
+// the local API's /auth/login. Signing in needs no AWS credentials.
+func (c *Client) UseCognito(region, clientID string) {
+	c.cognito = auth.NewCognito(aws.Config{Region: region, Credentials: aws.AnonymousCredentials{}}, clientID)
 }
 
 func NewClient(baseURL, deviceKey string) *Client {
@@ -57,6 +67,10 @@ func (c *Client) SendBatch(ctx context.Context, events []model.EventInput) (mode
 }
 
 func (c *Client) Login(ctx context.Context, email, password string) (string, error) {
+	if c.cognito != nil {
+		resp, err := c.cognito.Login(ctx, email, password)
+		return resp.Token, err
+	}
 	var resp model.LoginResponse
 	err := c.do(ctx, http.MethodPost, "/auth/login", nil, model.LoginRequest{Email: email, Password: password}, &resp)
 	return resp.Token, err

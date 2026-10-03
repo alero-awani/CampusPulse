@@ -114,6 +114,7 @@ func live(ctx context.Context, args []string) error {
 	studentEmail := fs.String("student-email", "", "also submit service requests as this student")
 	studentPassword := fs.String("student-password", "", "password for -student-email")
 	requestEvery := fs.Duration("request-every", 3*time.Minute, "average time between service requests")
+	cognitoClientID := fs.String("cognito-client-id", env("COGNITO_CLIENT_ID", ""), "sign the student in with Cognito directly (needed against AWS; env COGNITO_CLIENT_ID)")
 	_ = fs.Parse(args)
 
 	s, client, closeLog, err := c.setup()
@@ -121,6 +122,9 @@ func live(ctx context.Context, args []string) error {
 		return err
 	}
 	defer closeLog()
+	if *cognitoClientID != "" {
+		client.UseCognito(env("AWS_REGION", "us-east-1"), *cognitoClientID)
+	}
 	if *duration > 0 {
 		var cancel context.CancelFunc
 		ctx, cancel = context.WithTimeout(ctx, *duration)

@@ -1,6 +1,5 @@
-# Step 6: the Go API as two Lambda functions built from the same binary.
-#   campuspulse-api    all API routes except login; runs in the private subnets
-#   campuspulse-login  POST /auth/login; runs outside the VPC so it can reach Cognito
+# Step 6: the Go API as a Lambda function in the private subnets. Users and tools
+# sign in with Cognito directly, so the function never needs to reach the internet.
 # Build the binary first with ./build-lambda.sh.
 
 data "archive_file" "backend" {
@@ -31,10 +30,6 @@ resource "aws_cloudwatch_log_group" "api" {
   retention_in_days = 7
 }
 
-resource "aws_cloudwatch_log_group" "login" {
-  name              = "/aws/lambda/${var.project}-login"
-  retention_in_days = 7
-}
 
 resource "aws_lambda_function" "api" {
   function_name    = "${var.project}-api"
@@ -60,20 +55,3 @@ resource "aws_lambda_function" "api" {
   depends_on = [aws_cloudwatch_log_group.api, aws_iam_role_policy.api]
 }
 
-resource "aws_lambda_function" "login" {
-  function_name    = "${var.project}-login"
-  role             = aws_iam_role.login.arn
-  runtime          = "provided.al2023"
-  handler          = "bootstrap"
-  architectures    = ["arm64"]
-  filename         = data.archive_file.backend.output_path
-  source_code_hash = data.archive_file.backend.output_base64sha256
-  memory_size      = 128
-  timeout          = 10
-
-  environment {
-    variables = local.lambda_env
-  }
-
-  depends_on = [aws_cloudwatch_log_group.login, aws_iam_role_policy.login]
-}

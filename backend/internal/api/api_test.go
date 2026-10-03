@@ -50,18 +50,15 @@ func TestAPI(t *testing.T) {
 			must(t, st.UpsertRoom(ctx, store.RoomRecord{RoomID: r.ID, Name: r.Name, Building: r.Building, Floor: r.Floor, Type: r.Type, Capacity: r.Capacity, CreatedAt: model.FormatTime(now)}))
 		}
 	}
-	for _, u := range campus.DemoUsers {
-		hash, err := auth.HashPassword("demo1234")
-		must(t, err)
-		must(t, st.PutUser(ctx, store.UserRecord{Email: u.Email, ID: u.ID, Name: u.Name, Role: u.Role, PasswordHash: hash}))
-	}
+	accounts, err := auth.NewDemoAccounts("demo1234")
+	must(t, err)
 
 	tokens, err := auth.NewTokens([]byte("integration-test-secret-at-least-32-bytes"), time.Hour)
 	must(t, err)
 	loc, _ := time.LoadLocation("Europe/Paris")
 	log := slog.New(slog.NewTextHandler(io.Discard, nil))
-	svc := service.New(st, auth.NewLocal(st, tokens), loc, log, metrics.New(false, "test"))
-	srv := httptest.NewServer(api.New(svc, api.Config{Version: "test", DeviceKeys: []string{deviceKey}, AllowedOrigins: []string{"https://*.lovable.app"}}, log))
+	svc := service.New(st, auth.NewLocal(accounts, tokens), loc, log, metrics.New(false, "test"))
+	srv := httptest.NewServer(api.New(svc, api.Config{Version: "test", DeviceKeys: []string{deviceKey}, AllowedOrigins: []string{"https://*.lovable.app"}, PasswordLogin: true}, log))
 	defer srv.Close()
 	c := &client{t: t, base: srv.URL}
 

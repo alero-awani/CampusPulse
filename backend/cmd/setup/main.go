@@ -1,5 +1,6 @@
-// Command setup creates the DynamoDB tables and loads the campus layout, default
-// alert rules, and (locally) demo accounts. It is safe to run more than once.
+// Command setup creates the DynamoDB tables and loads the campus layout and the
+// default alert rules. It is safe to run more than once. Accounts are not stored in
+// DynamoDB: in AWS they live in Cognito, and local mode has the demo accounts built in.
 package main
 
 import (
@@ -7,10 +8,8 @@ import (
 	"flag"
 	"fmt"
 	"os"
-	"strings"
 	"time"
 
-	"campuspulse/internal/auth"
 	"campuspulse/internal/campus"
 	"campuspulse/internal/config"
 	"campuspulse/internal/model"
@@ -21,17 +20,15 @@ import (
 func main() {
 	reset := flag.Bool("reset", false, "delete all tables first (erases all data)")
 	buildings := flag.Int("buildings", 4, "number of buildings (more than 4 adds generated Annex buildings)")
-	password := flag.String("demo-password", "demo1234", "password for the demo accounts")
-	allowDemo := flag.Bool("allow-demo-users", false, "create demo accounts even when APP_ENV is not local")
 	flag.Parse()
 
-	if err := run(*reset, *buildings, *password, *allowDemo); err != nil {
+	if err := run(*reset, *buildings); err != nil {
 		fmt.Fprintln(os.Stderr, "setup failed:", err)
 		os.Exit(1)
 	}
 }
 
-func run(reset bool, buildings int, password string, allowDemo bool) error {
+func run(reset bool, buildings int) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
 	defer cancel()
 	cfg, _, err := config.Load()
@@ -85,22 +82,5 @@ func run(reset bool, buildings int, password string, allowDemo bool) error {
 		fmt.Println("Saved default alert rules")
 	}
 
-	if cfg.Env != "local" && !allowDemo {
-		fmt.Println("Skipped demo accounts (APP_ENV is not local; pass -allow-demo-users to create them)")
-		return nil
-	}
-	for _, u := range campus.DemoUsers {
-		hash, err := auth.HashPassword(password)
-		if err != nil {
-			return err
-		}
-		if err := st.PutUser(ctx, store.UserRecord{Email: u.Email, ID: u.ID, Name: u.Name, Role: u.Role, PasswordHash: hash}); err != nil {
-			return err
-		}
-	}
-	fmt.Printf("\nDemo accounts (password %q):\n", password)
-	for _, u := range campus.DemoUsers {
-		fmt.Printf("  %-26s %-12s %s\n", u.Email, u.Name, strings.ToUpper(string(u.Role)))
-	}
 	return nil
 }

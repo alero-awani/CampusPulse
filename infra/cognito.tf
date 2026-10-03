@@ -45,15 +45,17 @@ resource "aws_cognito_user_pool_domain" "main" {
   managed_login_version = 1
 }
 
-# App client for the dashboard and the login Lambda. It has no client secret.
+# App client for the dashboard and API tools. It has no client secret.
 # The dashboard signs users in through the hosted page (authorization code flow
-# with PKCE); the login Lambda uses username/password sign-in for API tools.
+# with PKCE); tools like Postman and the simulator use username/password sign-in.
 resource "aws_cognito_user_pool_client" "api" {
   name         = "${var.project}-api"
   user_pool_id = aws_cognito_user_pool.main.id
 
-  generate_secret               = false
-  explicit_auth_flows           = ["ALLOW_USER_PASSWORD_AUTH", "ALLOW_REFRESH_TOKEN_AUTH"]
+  generate_secret = false
+  # SRP is what the hosted sign-in page uses (the password never leaves the browser).
+  # USER_PASSWORD_AUTH is for API tools such as Postman and the simulator.
+  explicit_auth_flows           = ["ALLOW_USER_SRP_AUTH", "ALLOW_USER_PASSWORD_AUTH", "ALLOW_REFRESH_TOKEN_AUTH"]
   prevent_user_existence_errors = "ENABLED"
 
   allowed_oauth_flows_user_pool_client = true

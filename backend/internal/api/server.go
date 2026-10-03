@@ -16,6 +16,9 @@ type Config struct {
 	Version        string
 	DeviceKeys     []string
 	AllowedOrigins []string
+	// PasswordLogin enables POST /auth/login. It is only used in local mode;
+	// in AWS, browsers and tools sign in with Cognito directly.
+	PasswordLogin bool
 }
 
 type Server struct {
@@ -48,7 +51,9 @@ func New(svc *service.Service, cfg Config, log *slog.Logger) http.Handler {
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /health", s.health)
-	mux.HandleFunc("POST /auth/login", s.login)
+	if cfg.PasswordLogin {
+		mux.HandleFunc("POST /auth/login", s.login)
+	}
 
 	mux.Handle("POST /events", s.device(s.postEvent))
 	mux.Handle("POST /events/batch", s.device(s.postEventBatch))

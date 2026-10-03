@@ -7,23 +7,17 @@ import (
 
 	"campuspulse/internal/apperr"
 	"campuspulse/internal/model"
-	"campuspulse/internal/store"
 )
 
-// UserStore finds accounts by email.
-type UserStore interface {
-	GetUser(ctx context.Context, email string) (*store.UserRecord, error)
-}
-
-// Local checks passwords against bcrypt hashes in the users table and issues its
-// own signed tokens. It is used for local development and tests.
+// Local checks passwords against bcrypt hashes and issues its own signed tokens.
+// It is used for local development and tests, where there is no Cognito.
 type Local struct {
-	users  UserStore
-	tokens *Tokens
+	accounts Accounts
+	tokens   *Tokens
 }
 
-func NewLocal(users UserStore, tokens *Tokens) *Local {
-	return &Local{users: users, tokens: tokens}
+func NewLocal(accounts Accounts, tokens *Tokens) *Local {
+	return &Local{accounts: accounts, tokens: tokens}
 }
 
 func (a *Local) Login(ctx context.Context, email, password string) (model.LoginResponse, error) {
@@ -31,7 +25,7 @@ func (a *Local) Login(ctx context.Context, email, password string) (model.LoginR
 	if email == "" || password == "" {
 		return model.LoginResponse{}, apperr.Invalid("email and password are required")
 	}
-	u, err := a.users.GetUser(ctx, email)
+	u, err := a.accounts.GetAccount(ctx, email)
 	if err != nil {
 		return model.LoginResponse{}, err
 	}

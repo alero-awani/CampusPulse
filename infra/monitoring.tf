@@ -24,14 +24,6 @@ locals {
       statistic   = "Sum"
       threshold   = 1
     }
-    "login-lambda-errors" = {
-      description = "The login Lambda failed (crashed or timed out)."
-      namespace   = "AWS/Lambda"
-      metric      = "Errors"
-      dimensions  = { FunctionName = aws_lambda_function.login.function_name }
-      statistic   = "Sum"
-      threshold   = 1
-    }
     "api-lambda-throttles" = {
       description = "Lambda refused API requests because too many were running at once."
       namespace   = "AWS/Lambda"
@@ -157,8 +149,6 @@ resource "aws_cloudwatch_dashboard" "main" {
           metrics = [
             ["AWS/Lambda", "Invocations", "FunctionName", aws_lambda_function.api.function_name, { label = "API invocations" }],
             ["AWS/Lambda", "Errors", "FunctionName", aws_lambda_function.api.function_name, { label = "API errors" }],
-            ["AWS/Lambda", "Invocations", "FunctionName", aws_lambda_function.login.function_name, { label = "Login invocations" }],
-            ["AWS/Lambda", "Errors", "FunctionName", aws_lambda_function.login.function_name, { label = "Login errors" }],
           ]
         }
       },

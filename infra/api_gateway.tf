@@ -1,7 +1,8 @@
 # Step 7: API Gateway HTTP API, the public entry point.
 #
-# Public routes: GET /health, POST /auth/login (login Lambda), and the sensor
-# routes POST /events and POST /events/batch (the API checks the device key).
+# Public routes: GET /health, and the sensor routes POST /events and
+# POST /events/batch (the API checks the device key). Users sign in with Cognito
+# directly, so there is no login route.
 # Every other route requires a valid Cognito ID token, checked by API Gateway
 # before the request reaches the Lambda.
 
@@ -39,12 +40,6 @@ resource "aws_apigatewayv2_integration" "api" {
   payload_format_version = "2.0"
 }
 
-resource "aws_apigatewayv2_integration" "login" {
-  api_id                 = aws_apigatewayv2_api.main.id
-  integration_type       = "AWS_PROXY"
-  integration_uri        = aws_lambda_function.login.invoke_arn
-  payload_format_version = "2.0"
-}
 
 resource "aws_apigatewayv2_route" "public" {
   # "OPTIONS /{proxy+}" lets browser CORS preflight checks through: browsers never
@@ -57,11 +52,6 @@ resource "aws_apigatewayv2_route" "public" {
   target    = "integrations/${aws_apigatewayv2_integration.api.id}"
 }
 
-resource "aws_apigatewayv2_route" "login" {
-  api_id    = aws_apigatewayv2_api.main.id
-  route_key = "POST /auth/login"
-  target    = "integrations/${aws_apigatewayv2_integration.login.id}"
-}
 
 # Everything else (dashboard routes) requires a Cognito token.
 resource "aws_apigatewayv2_route" "authenticated" {
@@ -88,12 +78,6 @@ resource "aws_apigatewayv2_stage" "default" {
     throttling_burst_limit = 50
   }
 
-  # Stricter limit on login to slow down password guessing.
-  route_settings {
-    route_key              = aws_apigatewayv2_route.login.route_key
-    throttling_rate_limit  = 2
-    throttling_burst_limit = 5
-  }
 
   access_log_settings {
     destination_arn = aws_cloudwatch_log_group.api_access.arn
@@ -112,7 +96,7 @@ resource "aws_apigatewayv2_stage" "default" {
   }
 }
 
-# Allow this API, and nothing else, to invoke the Lambda functions.
+# Allow this API, and nothing else, to invoke the Lambda function.
 resource "aws_lambda_permission" "api" {
   statement_id  = "AllowApiGatewayInvoke"
   action        = "lambda:InvokeFunction"
@@ -121,10 +105,3 @@ resource "aws_lambda_permission" "api" {
   source_arn    = "${aws_apigatewayv2_api.main.execution_arn}/*/*"
 }
 
-resource "aws_lambda_permission" "login" {
-  statement_id  = "AllowApiGatewayInvoke"
-  action        = "lambda:InvokeFunction"
-  function_name = aws_lambda_function.login.function_name
-  principal     = "apigateway.amazonaws.com"
-  source_arn    = "${aws_apigatewayv2_api.main.execution_arn}/*/*"
-}

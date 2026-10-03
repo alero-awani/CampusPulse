@@ -32,3 +32,9 @@ variable "cors_allowed_origins" {
   type        = list(string)
   default     = ["http://localhost:8081", "http://localhost:5173"]
 }
+
+variable "replica_region" {
+  description = "Second AWS region holding live copies of the DynamoDB tables."
+  type        = string
+  default     = "eu-west-3" # Paris
+}

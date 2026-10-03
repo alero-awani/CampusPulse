@@ -2,6 +2,7 @@
 locals {
   tables = {
     events = {
+      replicate = false
       hash_key  = "event_id"
       range_key = null
       ttl       = "expires_at" # raw events expire after 30 days
@@ -11,12 +12,14 @@ locals {
       }
     }
     rooms = {
+      replicate = true
       hash_key  = "room_id"
       range_key = null
       ttl       = null
       indexes   = {}
     }
     alerts = {
+      replicate = true
       hash_key  = "alert_id"
       range_key = null
       ttl       = null
@@ -26,6 +29,7 @@ locals {
       }
     }
     service-requests = {
+      replicate = true
       hash_key  = "request_id"
       range_key = null
       ttl       = null
@@ -36,18 +40,14 @@ locals {
       }
     }
     aggregates = {
+      replicate = true
       hash_key  = "pk"
       range_key = "sk"
       ttl       = "expires_at" # ingestion counters expire after 48 hours
       indexes   = {}
     }
-    users = {
-      hash_key  = "email"
-      range_key = null
-      ttl       = null
-      indexes   = {}
-    }
     settings = {
+      replicate = true
       hash_key  = "id"
       range_key = null
       ttl       = null
@@ -104,6 +104,21 @@ resource "aws_dynamodb_table" "this" {
   # Continuous backups: any table can be restored to any second in the last 35 days.
   point_in_time_recovery {
     enabled = true
+  }
+
+  # Streams carry each change to the replica region. Required for replication.
+  stream_enabled   = each.value.replicate
+  stream_view_type = each.value.replicate ? "NEW_AND_OLD_IMAGES" : null
+
+  # A live copy in a second region, for recovery if us-east-1 is unavailable.
+  # The events table is left out: it is the highest-volume table, its data is
+  # regenerable, and it expires after 30 days anyway.
+  dynamic "replica" {
+    for_each = each.value.replicate ? [var.replica_region] : []
+    content {
+      region_name            = replica.value
+      point_in_time_recovery = true
+    }
   }
 
   # Data is encrypted at rest with an AWS-owned key (DynamoDB default, free).

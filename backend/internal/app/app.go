@@ -59,9 +59,13 @@ func Build(ctx context.Context, component string) (*App, error) {
 		if err != nil {
 			return nil, err
 		}
-		authn = auth.NewLocal(st, tokens)
+		accounts, err := auth.NewDemoAccounts(cfg.DemoPassword)
+		if err != nil {
+			return nil, err
+		}
+		authn = auth.NewLocal(accounts, tokens)
 	}
 	svc := service.New(st, authn, cfg.Location, log, metrics.New(cfg.EMF, component))
-	h := api.New(svc, api.Config{Version: config.Version, DeviceKeys: cfg.DeviceKeys, AllowedOrigins: cfg.AllowedOrigins}, log)
+	h := api.New(svc, api.Config{Version: config.Version, DeviceKeys: cfg.DeviceKeys, AllowedOrigins: cfg.AllowedOrigins, PasswordLogin: cfg.AuthMode == "local"}, log)
 	return &App{Config: cfg, Log: log, Store: st, Service: svc, Handler: h}, nil
 }
